@@ -1,4 +1,4 @@
-# 📈 SGX Stock Data Pipeline (End-to-End)
+# 📈 SGX Stock Data Pipeline
 ![CI Status](https://github.com/congminh-de/sgx_stock_etl_pipeline-/actions/workflows/ci_check.yaml/badge.svg)
 
 ---
