@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.vscode/
+.idea/
+
+mysql_sgx_data/
+postgres-db-volume/
+grafana_data/
+logs/
+plugins/
+
+config.ini
+.env
