@@ -7,12 +7,23 @@
 
 ```
 airflow/
-├── dags/                     # DAG orchestration layer
-├── scripts/                  # ETL logic (Pandas-based transformations)
-├── config/                   # Environment & Airflow configs
-├── .github/workflows/        # CI/CD (GitHub Actions)
-├── docker-compose.yaml       # Local infrastructure
-└── config_example.ini        # Credentials template
+.
+├── .github/                  # GitHub Actions CI/CD workflows
+├── config/                   # Configuration files directory
+├── dags/                     # Airflow DAGs orchestration
+├── data/                     # Local data storage (Raw/Processed)
+├── docs/                     # Project documentation
+├── logs/                     # Airflow & Service logs
+├── plugins/                  # Airflow custom plugins
+├── scripts/                  # Python ETL scripts & helpers
+├── sql_analysis/             # SQL scripts for data analysis
+├── .env                      # Environment variables (Git ignored)
+├── .gitignore                # Git ignore rules
+├── config_example.ini        # Configuration template
+├── config.ini                # Sensitive credentials (Git ignored)
+├── docker-compose.yaml       # Container orchestration (Airflow, DBs)
+├── grafana_dashboard.json    # Grafana dashboard export
+└── README.md                 # Project overview
 ```
 ---
 
