@@ -1,3 +1,14 @@
+CREATE TABLE IF NOT EXISTS etl_job_logs (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    dag_id VARCHAR(100),            
+    task_id VARCHAR(100),           
+    run_id VARCHAR(255),            
+    file_id VARCHAR(50),            
+    status VARCHAR(20),             
+    execution_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    row_count INT DEFAULT 0,        
+    error_message TEXT              
+);
 
 CREATE TABLE IF NOT EXISTS fact_hourly_stats (
     Comm VARCHAR(20),

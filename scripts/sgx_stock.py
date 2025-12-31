@@ -9,6 +9,8 @@ import pandas as pd
 import gc
 from sqlalchemy import create_engine, text
 from logging.handlers import RotatingFileHandler
+import traceback 
+from scripts.logger_utils import log_etl_status
 
 # CONFIGURATION
 CONFIG_PATH = "/opt/airflow/config.ini"
@@ -211,7 +213,7 @@ def load_to_mysql(final_datasets, source_id, engine):
         raise e
 
 # MAIN EXECUTION
-def run_etl_process(start_id, count=1):
+def run_etl_process(start_id, count=1, **kwargs):
     if not os.path.exists(CONFIG_PATH):
         raise FileNotFoundError("Config.ini not found")
     
@@ -223,21 +225,46 @@ def run_etl_process(start_id, count=1):
     
     if not os.path.exists(TEMP_DIR):
         os.makedirs(TEMP_DIR)
+    dag_id = kwargs.get('dag').dag_id if kwargs.get('dag') else 'manual_dag'
+    task_id = kwargs.get('task').task_id if kwargs.get('task') else 'manual_task'
+    run_id = kwargs.get('run_id', 'manual_run')
 
+    logger.info(f"Starting ETL for DAG: {dag_id}, Task: {task_id}")
     for i in range(count):
         current_id = start_id + i
         temp_file = os.path.join(TEMP_DIR, f"{current_id}.zip")
-        
+
         try:
             success = extract_data(current_id, base_url, temp_file)
             if not success: continue
             datasets = transform_data(temp_file, current_id)
+            total_rows = sum(len(df) for df in datasets.values())
             load_to_mysql(datasets, current_id, engine)
-            
+            log_etl_status(
+                engine=engine,
+                dag_id=dag_id,
+                task_id=task_id,
+                run_id=run_id,
+                status="SUCCESS",
+                file_id=str(current_id),
+                row_count=total_rows
+            )            
         except Exception as e:
             logger.error(f"Failed ID {current_id}")
+            error_msg = traceback.format_exc()            
+            log_etl_status(
+                engine=engine,
+                dag_id=dag_id,
+                task_id=task_id,
+                run_id=run_id,
+                status="FAILED",
+                file_id=str(current_id),
+                error_msg=error_msg
+            )
+            raise e
         finally:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
             # Clean memory
             gc.collect()
+

@@ -22,9 +22,9 @@ with DAG(
     tags=['mysql', 'finance'],
 ) as dag:
 
-    def task_wrapper():
+    def task_wrapper(**kwargs):
         current_id = int(Variable.get("sgx_current_id", default_var=6076))
-        run_etl_process(current_id)
+        run_etl_process(current_id, **kwargs)
 
     def increase_id():
         current = int(Variable.get("sgx_current_id", default_var=6076))
@@ -33,7 +33,8 @@ with DAG(
 
     run_task = PythonOperator(
         task_id='run_etl_job',
-        python_callable=task_wrapper
+        python_callable=task_wrapper,
+        provide_context=True 
     )
 
     update_task = PythonOperator(
