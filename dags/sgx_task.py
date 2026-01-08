@@ -34,7 +34,6 @@ with DAG(
     run_task = PythonOperator(
         task_id='run_etl_job',
         python_callable=task_wrapper,
-        provide_context=True 
     )
 
     update_task = PythonOperator(

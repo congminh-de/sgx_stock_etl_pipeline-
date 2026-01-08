@@ -1,4 +1,6 @@
 -- samples 
+
+SELECT * FROM etl_job_logs;
 CREATE TABLE Comm_change AS
 SELECT 
     Comm,
@@ -23,4 +25,5 @@ SELECT
     SUM(Total_Count) AS Total_Count
 FROM fact_trade_distribution
 GROUP BY `Trader_Type`;
+
 

@@ -10,7 +10,7 @@ import gc
 from sqlalchemy import create_engine, text
 from logging.handlers import RotatingFileHandler
 import traceback 
-from scripts.logger_utils import log_etl_status
+from logger_utils import log_etl_status
 
 # CONFIGURATION
 CONFIG_PATH = "/opt/airflow/config.ini"
