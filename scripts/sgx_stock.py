@@ -56,6 +56,20 @@ def classify_traders(vol):
     elif vol <= 100: return '3. Shark'
     else: return '4. Whale'
 
+# DATA QUALITY VALIDATION 
+def validate_dataset(df, name):
+    if df.empty:
+        raise ValueError(f"Dataset {name} is NULL")
+        return True
+    if "Total_Turnover" in df.columns:
+        if (df["Total_Turnover"]<0).any():
+            raise ValueError(f"Dataset {name} has negative turnover values")
+    if "Trade_Date" in df.columns:
+        if (df["Trade_Date"]).isnull().any():
+            raise ValueError(f"Dataset {name} has Null trade_date values")
+    logger.info(f"Dataset {name} passed Data Quality Checks")
+    return True
+
 # DOWNLOAD DATA TO DISK
 def extract_data(file_id, base_url, save_path):
     url = base_url.format(id=file_id)
@@ -163,6 +177,7 @@ def transform_data(zip_file_path, source_id):
         # Finalize hourly
         if running_hourly is not None:
             running_hourly['source_id'] = source_id
+            validate_dataset(running_hourly, "fact_hourly_stats")
             final_datasets['fact_hourly_stats'] = running_hourly
 
         # Finalize daily 
@@ -181,11 +196,13 @@ def transform_data(zip_file_path, source_id):
             
             final_daily = grouped.join(global_open.rename('Open')).join(global_close.rename('Close')).reset_index()
             final_daily['source_id'] = source_id
+            validate_dataset(final_daily, "fact_daily_summary")
             final_datasets['fact_daily_summary'] = final_daily
 
         # Finalize distribution
         if running_dist is not None:
             running_dist['source_id'] = source_id
+            validate_dataset(running_dist, "fact_trade_distribution")
             final_datasets['fact_trade_distribution'] = running_dist
 
         return final_datasets
@@ -194,22 +211,49 @@ def transform_data(zip_file_path, source_id):
         logger.error(f"Processing Error: {str(e)}")
         raise e
 
+# LOAD SQL QUERY   
+def load_query(query_name):
+    path = f"/opt/airflow/sql_analysis/queries/{query_name}.sql"
+    with open(path, 'r') as f:
+        return f.read()
+
 # LOAD TO MYSQL
 def load_to_mysql(final_datasets, source_id, engine):
     if not final_datasets:
         return
 
     logger.info(f"Loading Source ID {source_id} to MySQL...")
+    clean_sql = load_query("clean_old_data")
     try:
         with engine.begin() as conn:
             for table_name, df in final_datasets.items():
-                if df.empty: continue               
-                conn.execute(text(f"DELETE FROM {table_name} WHERE source_id = :sid"), {"sid": source_id})
+                if df.empty: continue       
+                sql = clean_sql.replace("{{ table_name}}", table_name)        
+                conn.execute(text(sql), {"sid": source_id})
                 df.to_sql(table_name, con=conn, if_exists='append', index=False, chunksize=2000)
                 
         logger.info("Load Completed.")
     except Exception as e:
         logger.error(f"SQL Error: {str(e)}")
+        raise e
+    
+# SEED NEXT JOB
+def seed_daily_job(**kwargs):
+    if not os.path.exists(CONFIG_PATH):
+        raise FileNotFoundError("Config.ini not found")
+    config = configparser.ConfigParser()
+    config.read(CONFIG_PATH)
+    engine = get_db_engine(config)
+    
+    try:
+        logger.info("Seeding next job into Metadata...")
+        with engine.begin() as conn:
+            # run file SQL and run
+            sql = load_query('seed_next_job')
+            conn.execute(text(sql))
+        logger.info("Seeding completed.")
+    except Exception as e:
+        logger.error(f"Seeding Failed: {e}")
         raise e
 
 # MAIN EXECUTION
@@ -225,46 +269,75 @@ def run_etl_process(start_id, count=1, **kwargs):
     
     if not os.path.exists(TEMP_DIR):
         os.makedirs(TEMP_DIR)
+
+    # Context from Airflow
     dag_id = kwargs.get('dag').dag_id if kwargs.get('dag') else 'manual_dag'
     task_id = kwargs.get('task').task_id if kwargs.get('task') else 'manual_task'
     run_id = kwargs.get('run_id', 'manual_run')
 
-    logger.info(f"Starting ETL for DAG: {dag_id}, Task: {task_id}")
-    for i in range(count):
-        current_id = start_id + i
-        temp_file = os.path.join(TEMP_DIR, f"{current_id}.zip")
+    current_id = None
+    try:
+        with engine.connect() as conn:
+            sql_get = load_query("get_next_pending")
+            result = conn.excecute(text(sql_get)).fetchone()
+            if not result:
+                logger.info("No PENDING files found in Metadata")
+                return
+            current_id = result[0]
+            sql_update = load_query("update_status")
+            conn.execute(text(sql_update), {"status": "PROCESSING", "file_id": current_id})
+            conn.commit()
+            logger.info(f"Processing PENDING file id: {current_id}")
+    except Exception as e:
+        logger.error(f"Metadata error: {e}")
+        return 
 
+    logger.info(f"Starting ETL for DAG: {dag_id}, Task: {task_id}")
+
+    temp_file = os.path.join(TEMP_DIR, f"{current_id}.zip")
+
+    try:
+        success = extract_data(current_id, base_url, temp_file)
+        if not success: 
+            raise Exception(f"Download failed for id {current_id}")
+        datasets = transform_data(temp_file, current_id)
+        total_rows = sum(len(df) for df in datasets.values())
+        load_to_mysql(datasets, current_id, engine)
+        
+        with engine.begin() as conn:
+            sql_update = load_query("update_status")
+            conn.execute(text(sql_update), {"status": "SUCCESS", "file_id": current_id})
+        log_etl_status(
+            engine=engine,
+            dag_id=dag_id,
+            task_id=task_id,
+            run_id=run_id,
+            status="SUCCESS",
+            file_id=str(current_id),
+            row_count=total_rows
+        )            
+    except Exception as e:
+        logger.error(f"Failed ID {current_id}: {e}")
+        error_msg = traceback.format_exc()  
         try:
-            success = extract_data(current_id, base_url, temp_file)
-            if not success: continue
-            datasets = transform_data(temp_file, current_id)
-            total_rows = sum(len(df) for df in datasets.values())
-            load_to_mysql(datasets, current_id, engine)
-            log_etl_status(
-                engine=engine,
-                dag_id=dag_id,
-                task_id=task_id,
-                run_id=run_id,
-                status="SUCCESS",
-                file_id=str(current_id),
-                row_count=total_rows
-            )            
-        except Exception as e:
-            logger.error(f"Failed ID {current_id}")
-            error_msg = traceback.format_exc()            
-            log_etl_status(
-                engine=engine,
-                dag_id=dag_id,
-                task_id=task_id,
-                run_id=run_id,
-                status="FAILED",
-                file_id=str(current_id),
-                error_msg=error_msg
-            )
-            raise e
-        finally:
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
-            # Clean memory
-            gc.collect()
+            with engine.begin() as conn:
+                sql_update = load_query("update_status")
+                conn.execute(text(sql_update), {"status": "FAILED", "file_id": current_id})
+        except:
+            pass
+        log_etl_status(
+            engine=engine,
+            dag_id=dag_id,
+            task_id=task_id,
+            run_id=run_id,
+            status="FAILED",
+            file_id=str(current_id),
+            error_msg=error_msg
+        )
+        raise e
+    finally:
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+        # Clean memory
+        gc.collect()
 
