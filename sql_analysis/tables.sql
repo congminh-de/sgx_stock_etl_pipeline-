@@ -31,10 +31,7 @@ CREATE TABLE IF NOT EXISTS fact_hourly_stats (
     Total_Turnover DOUBLE,
     Low DOUBLE,
     High DOUBLE,
-    source_id INT,
-    Full_Time DATETIME,
-    INDEX idx_source (source_id),
-    INDEX idx_comm_date (Comm, Trade_Date)
+    source_id INT
 );
 
 CREATE TABLE IF NOT EXISTS fact_daily_summary (
@@ -46,9 +43,7 @@ CREATE TABLE IF NOT EXISTS fact_daily_summary (
     High DOUBLE,
     Open DOUBLE,
     Close DOUBLE,
-    source_id INT,
-    INDEX idx_source (source_id),
-    INDEX idx_comm_date (Comm, Trade_Date)
+    source_id INT
 );
 
 CREATE TABLE IF NOT EXISTS fact_trade_distribution (
@@ -56,6 +51,5 @@ CREATE TABLE IF NOT EXISTS fact_trade_distribution (
     Trader_Type VARCHAR(50),
     Trade_Count INT,
     Total_Volume BIGINT,
-    source_id INT,
-    INDEX idx_source (source_id)
+    source_id INT
 );

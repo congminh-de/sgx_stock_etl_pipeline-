@@ -36,7 +36,6 @@ def setup_logging():
     logger.addHandler(file_h)
     logger.addHandler(console_h)
     return logger
-
 logger = setup_logging()
 
 # CONNECTION
@@ -51,10 +50,10 @@ def get_db_engine(config):
         raise e
 
 def classify_traders(vol):
-    if vol <= 5: return '1. Retail'
-    elif vol <= 20: return '2. Medium'
-    elif vol <= 100: return '3. Shark'
-    else: return '4. Whale'
+    if vol <= 5: return 'Retail'
+    elif vol <= 20: return 'Medium'
+    elif vol <= 100: return 'Shark'
+    else: return 'Whale'
 
 # DATA QUALITY VALIDATION 
 def validate_dataset(df, name):
@@ -228,7 +227,7 @@ def load_to_mysql(final_datasets, source_id, engine):
         with engine.begin() as conn:
             for table_name, df in final_datasets.items():
                 if df.empty: continue       
-                sql = clean_sql.replace("{{ table_name}}", table_name)        
+                sql = clean_sql.replace("{{ table_name }}", table_name)        
                 conn.execute(text(sql), {"sid": source_id})
                 df.to_sql(table_name, con=conn, if_exists='append', index=False, chunksize=2000)
                 
@@ -257,7 +256,7 @@ def seed_daily_job(**kwargs):
         raise e
 
 # MAIN EXECUTION
-def run_etl_process(start_id, count=1, **kwargs):
+def run_etl_process(**kwargs):
     if not os.path.exists(CONFIG_PATH):
         raise FileNotFoundError("Config.ini not found")
     
@@ -277,16 +276,15 @@ def run_etl_process(start_id, count=1, **kwargs):
 
     current_id = None
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             sql_get = load_query("get_next_pending")
-            result = conn.excecute(text(sql_get)).fetchone()
+            result = conn.execute(text(sql_get)).fetchone()
             if not result:
                 logger.info("No PENDING files found in Metadata")
                 return
             current_id = result[0]
             sql_update = load_query("update_status")
             conn.execute(text(sql_update), {"status": "PROCESSING", "file_id": current_id})
-            conn.commit()
             logger.info(f"Processing PENDING file id: {current_id}")
     except Exception as e:
         logger.error(f"Metadata error: {e}")
