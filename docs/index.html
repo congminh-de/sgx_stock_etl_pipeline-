@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Cong Minh | SGX Derivatives Analytics Portfolio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+  
+        :root {
+            --sgx-navy: #1B2A5A;        
+            --sgx-purple: #4A4A8A;  
+            --sgx-yellow: #FFE600;    
+            --sgx-light-yellow: #FFF4B3;
+            --bg-dark: #0F1729;        
+            --bg-card: #1A2642;        
+            --text-primary: #FFFFFF;
+            --text-secondary: #A8B2D1;
+            --accent-green: #00FF9D;   
+            --accent-red: #FF4757;     
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1f3a 100%);
+            color: var(--text-primary);
+            line-height: 1.7;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+  
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(75, 75, 138, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(75, 75, 138, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 25px;
+        }
+
+        .section-padding {
+            padding: 80px 0;
+        }
+
+
+        header {
+            background: rgba(27, 42, 90, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 2px solid var(--sgx-yellow);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo img {
+            height: 50px;
+            width: auto;
+            filter: brightness(1.2);
+        }
+
+        .author-badge {
+            font-weight: 600;
+            color: var(--text-primary);
+            background: linear-gradient(135deg, var(--sgx-purple) 0%, var(--sgx-navy) 100%);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            border: 1px solid var(--sgx-yellow);
+            transition: all 0.3s ease;
+        }
+
+        .author-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 230, 0, 0.3);
+        }
+
+        .author-badge a {
+            color: var(--sgx-yellow);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+  
+        .hero {
+            text-align: center;
+            padding: 100px 20px;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255, 230, 0, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(74, 74, 138, 0.1) 0%, transparent 50%);
+            position: relative;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--sgx-yellow), transparent);
+        }
+
+        .hero-tag {
+            color: var(--sgx-yellow);
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            margin-bottom: 20px;
+            display: inline-block;
+            padding: 5px 15px;
+            background: rgba(255, 230, 0, 0.1);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 230, 0, 0.3);
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 25px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text-primary), var(--sgx-yellow), var(--sgx-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(255, 230, 0, 0.2);
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            max-width: 750px;
+            margin: 0 auto;
+            color: var(--text-secondary);
+        }
+
+
+        .story-section {
+            background: var(--bg-dark);
+        }
+
+        .story-block {
+            background: var(--bg-card);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border-left: 4px solid var(--sgx-yellow);
+            margin-bottom: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: start;
+            transition: all 0.3s ease;
+        }
+
+        .story-block:hover {
+            transform: translateX(5px);
+            box-shadow: 0 15px 40px rgba(255, 230, 0, 0.2);
+        }
+
+        .story-content h3 {
+            color: var(--sgx-yellow);
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .story-content h3::before {
+            content: '▸';
+            margin-right: 10px;
+            color: var(--accent-green);
+            font-size: 1.5rem;
+        }
+
+        .story-content p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            text-align: justify;
+            line-height: 1.8;
+        }
+        
+        .highlight-text {
+            color: var(--sgx-yellow);
+            font-weight: 600;
+            background: rgba(255, 230, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .story-image {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 230, 0, 0.3);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+            max-height: 450px;
+        }
+
+        @media (max-width: 968px) {
+            .story-block {
+                grid-template-columns: 1fr;
+            }
+            
+            .story-image {
+                height: 200px;
+            }
+        }
+
+
+        .section-title-center {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title-center h2 {
+            font-size: 2.5rem;
+            color: var(--text-primary);
+            position: relative;
+            display: inline-block;
+            padding-bottom: 15px;
+        }
+
+        .section-title-center h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--sgx-yellow), var(--sgx-purple));
+            border-radius: 2px;
+        }
+
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            padding: 35px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            border-top: 3px solid transparent;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 230, 0, 0.05) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(255, 230, 0, 0.2);
+        }
+
+        .card.finance {
+            border-top-color: var(--sgx-yellow);
+        }
+
+        .card.tech {
+            border-top-color: var(--accent-green);
+        }
+        
+        .card.lesson {
+            border-left: 3px solid var(--sgx-purple);
+            border-top: none;
+        }
+
+        .card h3 {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            display: block;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card.finance .card-icon { color: var(--sgx-yellow); }
+        .card.tech .card-icon { color: var(--accent-green); }
+        
+        .card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            position: relative;
+            z-index: 1;
+        }
+
+ 
+        .cta-section {
+            text-align: center;
+            padding: 100px 20px;
+            background: linear-gradient(135deg, var(--sgx-navy) 0%, var(--bg-dark) 100%);
+            position: relative;
+        }
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--sgx-yellow), transparent);
+        }
+
+        .github-btn {
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(135deg, var(--sgx-purple) 0%, var(--sgx-navy) 100%);
+            color: var(--sgx-yellow);
+            padding: 18px 35px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            border: 2px solid var(--sgx-yellow);
+            margin-top: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .github-btn:hover {
+            background: linear-gradient(135deg, var(--sgx-yellow) 0%, var(--sgx-purple) 100%);
+            color: var(--sgx-navy);
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px rgba(255, 230, 0, 0.4);
+        }
+
+        .github-btn span {
+            margin-left: 10px;
+        }
+
+
+        footer {
+            background: var(--sgx-navy);
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 30px 0;
+            font-size: 0.9rem;
+            border-top: 2px solid var(--sgx-yellow);
+        }
+        
+        footer strong {
+            color: var(--sgx-yellow);
+        }
+
+
+        .ticker-line {
+            height: 2px;
+            background: linear-gradient(90deg, 
+                var(--accent-green) 0%, 
+                var(--accent-green) 30%, 
+                var(--accent-red) 70%, 
+                var(--accent-red) 100%);
+            margin: 20px 0;
+            opacity: 0.5;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container nav-content">
+            <div class="logo">
+                <!-- "sgx_logo.png" -->
+                <img src="https://www.ibm.com/content/dam/adobe-cms/case-studies/en/sites/default/files/2019-07-30/Leadspace_logo.jpg" alt="SGX Logo" onerror="this.src='https://via.placeholder.com/150x50/1B2A5A/FFE600?text=SGX'">
+            </div>
+            <div class="author-badge">Let's connect: <a href="https://www.linkedin.com/in/minh-cong-le-248929375" target="_blank">Le Cong Minh</a> - Data Engineer</div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <span class="hero-tag">📊 Resource-Optimized Financial Data Engineering</span>
+            <h1>SGX Derivatives ETL-Analytics Pipeline</h1>
+            <div class="ticker-line"></div>
+            <p>End-to-end automation for analyzing market microstructure, tracking institutional capital flow, and visualizing intraday volatility patterns on the Singapore Exchange.</p>
+        </div>
+    </section>
+
+    <section class="section-padding story-section">
+        <div class="container">
+            <div class="story-block">
+                <div class="story-content">
+                    <h3>The Business Challenge</h3>
+                    <p>
+                        The Singapore Exchange (SGX) derivatives market generates massive volumes of high-frequency tick data every trading day. For quantitative analysts and institutional traders, extracting meaningful signals from this noise is mission-critical.
+                    </p>
+                    <p>
+                        The core requirement was to ingest daily transaction logs to analyze <span class="highlight-text">market microstructure</span>, specifically tracking contract volatility, hourly turnover velocity, and identifying significant volume spikes that indicate institutional activity.
+                    </p>
+                    <p>
+                        The significant constraint was infrastructure: executing complex aggregations on terabytes of historical data using only a <span class="highlight-text">local machine constrained to 8GB RAM</span>, without compromising on reliability or data freshness (T+1 SLA requirement).
+                    </p>
+                </div>
+                <!--  "sgx_building.jpg"  -->
+                <img src="http://cashmart.sg/wp-content/uploads/2022/06/SGX.jpg" alt="SGX Building" class="story-image" onerror="this.src='https://via.placeholder.com/400x250/1B2A5A/FFE600?text=SGX+Building'">
+            </div>
+
+            <div class="story-block">
+                <div class="story-content">
+                    <h3>The Engineered Solution</h3>
+                    <p>
+                        I architected an <span class="highlight-text">Automated ELT Pipeline</span> that overcomes hardware limitations through a sophisticated Hybrid Architecture combining Python and MySQL.
+                    </p>
+                    <p>
+                        The system utilizes Python streaming for memory-efficient extraction from SGX data sources and strategically offloads heavy transformations to MySQL Stored Procedures. Raw tick data is structured into a high-performance <span class="highlight-text">Star Schema Data Warehouse</span> with yearly partitioning.
+                    </p>
+                    <p>
+                        <strong>Result:</strong> A robust analytical engine that successfully powers a visualization dashboard, enabling the detection of institutional "Whale" activity and monitoring intraday price action reliably every morning at 7 AM with full idempotency and data quality checks.
+                    </p>
+                </div>
+                <!-- "architecture_diagram.png" -->
+                <img src="docs/sgx_pipeline.drawio.png" alt="System Architecture Diagram" class="story-image" onerror="this.src='https://via.placeholder.com/500x300/1B2A5A/00FF9D?text=Architecture+Diagram'">
+            </div>
+        </div>
+    </section>
+
+    <section class="section-padding">
+        <div class="container">
+            <div class="section-title-center">
+                <h2>Project Highlights & Value Delivered</h2>
+            </div>
+            
+            <div class="cards-grid">
+                <div class="card finance">
+                    <span class="card-icon">📈</span>
+                    <h3>Institutional Flow Tracking</h3>
+                    <p>Developed logic to classify trades by lot size, separating retail noise from institutional "smart money" accumulation and distribution patterns for alpha generation.</p>
+                </div>
+
+                <div class="card finance">
+                    <span class="card-icon">⏱️</span>
+                    <h3>Microstructure Analysis</h3>
+                    <p>Provides granular visibility into intraday market dynamics, including hourly turnover velocity, OHLC volatility spreads, and time-based liquidity patterns.</p>
+                </div>
+
+                <div class="card tech">
+                    <span class="card-icon">⚙️</span>
+                    <h3>Resource-Optimized ELT</h3>
+                    <p>Solved OOM (Out-of-Memory) issues on 8GB RAM by implementing streaming ingestion patterns and database-side transformations using SQL stored procedures.</p>
+                </div>
+
+                <div class="card tech">
+                    <span class="card-icon">🛡️</span>
+                    <h3>Enterprise Reliability</h3>
+                    <p>Built-in Data Quality gates, Idempotency for safe re-runs, SLA monitoring with alerting, and Yearly Table Partitioning for long-term scalability.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-padding" style="background: #0d1f3a;">
+        <div class="container">
+            <div class="section-title-center">
+                <h2>Key Lessons Learned</h2>
+            </div>
+            <div class="cards-grid">
+                <div class="card lesson">
+                    <h3>💡 The Power of Hybrid Architectures</h3>
+                    <p>Learned that "one tool doesn't fit all." Combining Python's flexibility for extraction with a Relational Database's power for set-based transformations (SQL) yielded the best performance-to-resource ratio in constrained environments.</p>
+                </div>
+                <div class="card lesson">
+                    <h3>💡 Constraints Drive Innovation</h3>
+                    <p>The 8GB RAM limit forced a deeper understanding of memory management, streaming algorithms (map-reduce style), and efficient database schema design (Star Schema & Partitioning) that I wouldn't have gained with unlimited cloud resources.</p>
+                </div>
+                <div class="card lesson">
+                    <h3>💡 Production vs. "Just Working"</h3>
+                    <p>Moving beyond code that just runs to building a system that is robust, monitorable (logs/SLAs), and resilient to failures (idempotency/retries) is the core distinction between engineering and scripting.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <h2 style="margin-bottom: 20px; border: none;">Ready to dive into the implementation?</h2>
+            <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto;">Explore the detailed Documentation, System Architecture Diagram, and complete Source Code on my GitHub repository.</p>
+            
+            <a href="https://github.com/congminh-de/sgx_stock_etl_pipeline-" target="_blank" class="github-btn">
+                <svg height="24" viewBox="0 0 16 16" version="1.1" width="24" aria-hidden="true" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                </svg>
+                <span>View Project on GitHub</span>
+            </a>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>Designed & Engineered by <strong>Le Cong Minh</strong> | <a href="https://www.linkedin.com/in/minh-cong-le-248929375" target="_blank" style="color: var(--sgx-yellow); text-decoration: none;">Connect on LinkedIn</a> | © 2026. All rights reserved.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
