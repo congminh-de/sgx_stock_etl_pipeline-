@@ -1,7 +1,7 @@
 
-DROP TABLE IF EXISTS real_fact_trade_distribution;
-DROP TABLE IF EXISTS real_fact_hourly_stats;
-DROP TABLE IF EXISTS real_fact_session_summary;
+DROP TABLE IF EXISTS fact_trade_distribution;
+DROP TABLE IF EXISTS fact_hourly_stats;
+DROP TABLE IF EXISTS fact_session_summary;
 DROP TABLE IF EXISTS dim_trader_type;
 DROP TABLE IF EXISTS dim_commodity;
 DROP TABLE IF EXISTS dim_date;
@@ -29,7 +29,7 @@ CREATE TABLE dim_date (
 );
 
 
-CREATE TABLE real_fact_session_summary (
+CREATE TABLE fact_session_summary (
     source_id INT,           
     Comm_id INT,               
     Date_id INT,                
@@ -45,7 +45,7 @@ CREATE TABLE real_fact_session_summary (
 );
 
 
-CREATE TABLE real_fact_hourly_stats (
+CREATE TABLE fact_hourly_stats (
     source_id INT,
     Comm_id INT,
     Date_id INT,
@@ -60,7 +60,7 @@ CREATE TABLE real_fact_hourly_stats (
 );
 
 
-CREATE TABLE real_fact_trade_distribution (
+CREATE TABLE fact_trade_distribution (
     source_id INT,
     Comm_id INT,
     Trader_Type_id INT, 
@@ -70,16 +70,20 @@ CREATE TABLE real_fact_trade_distribution (
     CONSTRAINT fk_dist_comm FOREIGN KEY (Comm_id) REFERENCES dim_commodity(Comm_id),
     CONSTRAINT fk_dist_type FOREIGN KEY (Trader_Type_id) REFERENCES dim_trader_type(Trader_Type_id)
 );
+ALTER TABLE fact_hourly_stats
+PARTITION BY RANGE (Date_id) (
+    PARTITION p2025 VALUES LESS THAN (20260101),
+    PARTITION p_future VALUES LESS THAN MAXVALUE
+);
 
+--DROP PROCEDURE IF EXISTS sp_etl_loads_fact$$
 DELIMITER $$
-
-DROP PROCEDURE IF EXISTS sp_etl_loads_fact$$
 
 CREATE PROCEDURE sp_etl_loads_fact()
 BEGIN 
 
     INSERT IGNORE INTO dim_commodity (Comm_Code)
-    SELECT DISTINCT Comm FROM fact_daily_summary; 
+    SELECT DISTINCT Comm FROM stg_session_summary; 
 
     INSERT IGNORE INTO dim_trader_type (Trader_Type_Name)
     VALUES ('Retail'), ('Medium'), ('Shark'), ('Whale');   
@@ -93,12 +97,12 @@ BEGIN
         QUARTER(STR_TO_DATE(CAST(Trade_Date AS CHAR), '%Y%m%d')),
         WEEK(STR_TO_DATE(CAST(Trade_Date AS CHAR), '%Y%m%d')),
         DAYNAME(STR_TO_DATE(CAST(Trade_Date AS CHAR), '%Y%m%d'))
-    FROM fact_daily_summary;   
+    FROM stg_session_summary;   
 
-    DELETE FROM real_fact_session_summary 
-    WHERE source_id IN (SELECT DISTINCT source_id FROM fact_daily_summary);   
+    DELETE FROM fact_session_summary 
+    WHERE source_id IN (SELECT DISTINCT source_id FROM stg_session_summary);   
 
-    INSERT INTO real_fact_session_summary 
+    INSERT INTO fact_session_summary 
     (source_id, Comm_id, Date_id, Total_Volume, Total_Turnover, Low, High, Open, Close)
     SELECT 
         s.source_id,
@@ -108,20 +112,20 @@ BEGIN
         SUM(s.Total_Turnover) as Total_Turnover, 
         MIN(s.Low) as Low,   
         MAX(s.High) as High, 
-        (SELECT Open FROM fact_daily_summary s2 
+        (SELECT Open FROM stg_session_summary s2 
          WHERE s2.source_id = s.source_id AND s2.Comm = s.Comm 
          ORDER BY s2.Trade_Date ASC LIMIT 1) as Open_Price,
-        (SELECT Close FROM fact_daily_summary s2 
+        (SELECT Close FROM stg_session_summary s2 
          WHERE s2.source_id = s.source_id AND s2.Comm = s.Comm 
          ORDER BY s2.Trade_Date DESC LIMIT 1) as Close_Price
-    FROM fact_daily_summary s
+    FROM stg_session_summary s
     JOIN dim_commodity d ON s.Comm = d.Comm_Code
     GROUP BY s.source_id, d.Comm_id; 
 
-    DELETE FROM real_fact_hourly_stats 
+    DELETE FROM fact_hourly_stats 
     WHERE source_id IN (SELECT DISTINCT source_id FROM fact_hourly_stats);
 
-    INSERT INTO real_fact_hourly_stats 
+    INSERT INTO fact_hourly_stats 
     (source_id, Comm_id, Date_id, Hour, Total_Volume, Total_Turnover, Low, High)
     SELECT 
         s.source_id,
@@ -131,13 +135,13 @@ BEGIN
         s.Total_Volume,
         s.Total_Turnover,
         s.Low, s.High
-    FROM fact_hourly_stats s
+    FROM stg_hourly_stats s
     JOIN dim_commodity d ON s.Comm = d.Comm_Code; 
 
-    DELETE FROM real_fact_trade_distribution 
-    WHERE source_id IN (SELECT DISTINCT source_id FROM fact_trade_distribution); 
+    DELETE FROM fact_trade_distribution 
+    WHERE source_id IN (SELECT DISTINCT source_id FROM stg_trade_distribution); 
 
-    INSERT INTO real_fact_trade_distribution 
+    INSERT INTO fact_trade_distribution 
     (source_id, Comm_id, Trader_Type_id, Trade_Count, Total_Volume)
     SELECT 
         s.source_id,
@@ -145,7 +149,7 @@ BEGIN
         t.Trader_Type_id,
         SUM(s.Trade_Count), 
         SUM(s.Total_Volume) 
-    FROM fact_trade_distribution s
+    FROM stg_trade_distribution s
     JOIN dim_commodity c ON s.Comm = c.Comm_Code
     JOIN dim_trader_type t ON s.Trader_Type = t.Trader_Type_Name
     GROUP BY s.source_id, c.Comm_id, t.Trader_Type_id; 

@@ -7,6 +7,8 @@ import requests
 import zipfile
 import pandas as pd
 import gc
+import time
+from datetime import datetime, timedelta
 from sqlalchemy import create_engine, text
 from logging.handlers import RotatingFileHandler
 import traceback 
@@ -16,6 +18,10 @@ from logger_utils import log_etl_status
 CONFIG_PATH = "/opt/airflow/config.ini"
 LOG_DIR = "/opt/airflow/logs"
 TEMP_DIR = "/opt/airflow/data/temp"
+SLA_CONFIG = {
+    "MAX_duration": 120, 
+    "DEADLINE_HOUR": 8,         
+}
 
 # SETUP LOGGING
 def setup_logging():
@@ -94,7 +100,7 @@ def transform_data(zip_file_path, source_id):
 
     # We use these to accumulate data chunk by chunk 
     running_hourly = None
-    running_daily = None
+    running_session = None
     running_dist = None
     
     try:
@@ -131,25 +137,25 @@ def transform_data(zip_file_path, source_id):
                 running_hourly = running_hourly.groupby(['Comm', 'Trade_Date', 'Hour'], observed=True).agg({
                     'Total_Volume': 'sum', 'Total_Turnover': 'sum', 'Low': 'min', 'High': 'max'}).reset_index()
 
-            # 2.Daily aggregation
+            # 2.session aggregation
             # For Open/Close, we take the min/max Log_Time of the chunk to sort later
-            chunk_daily = chunk.groupby(['Comm', 'Trade_Date'], observed=True).agg({
+            chunk_session = chunk.groupby(['Comm', 'Trade_Date'], observed=True).agg({
                 'Volume': 'sum', 'Turnover': 'sum', 'Price': ['min', 'max'], 'Log_Time': ['min', 'max']})
-            chunk_daily.columns = ['Total_Volume', 'Total_Turnover', 'Low', 'High', 'Time_Min', 'Time_Max']
+            chunk_session.columns = ['Total_Volume', 'Total_Turnover', 'Low', 'High', 'Time_Min', 'Time_Max']
 
             # Get First/Last price of chunks
             chunk.sort_values('Log_Time', inplace=True)
             first_prices = chunk.groupby(['Comm', 'Trade_Date'], observed=True)['Price'].first()
             last_prices = chunk.groupby(['Comm', 'Trade_Date'], observed=True)['Price'].last()
             
-            chunk_daily = chunk_daily.reset_index()
-            chunk_daily['Open_Price'] = chunk_daily.set_index(['Comm', 'Trade_Date']).index.map(first_prices)
-            chunk_daily['Close_Price'] = chunk_daily.set_index(['Comm', 'Trade_Date']).index.map(last_prices)
+            chunk_session = chunk_session.reset_index()
+            chunk_session['Open_Price'] = chunk_session.set_index(['Comm', 'Trade_Date']).index.map(first_prices)
+            chunk_session['Close_Price'] = chunk_session.set_index(['Comm', 'Trade_Date']).index.map(last_prices)
             
-            if running_daily is None:
-                running_daily = chunk_daily
+            if running_session is None:
+                running_session = chunk_session
             else:
-                running_daily = pd.concat([running_daily, chunk_daily])
+                running_session = pd.concat([running_session, chunk_session])
                 pass 
 
             # 3.Distribution
@@ -166,7 +172,7 @@ def transform_data(zip_file_path, source_id):
                 running_dist = running_dist.groupby(['Comm', 'Trader_Type'], observed=True).agg({
                     'Trade_Count': 'sum', 'Total_Volume': 'sum'}).reset_index()
             # Clean up memory
-            del chunk, chunk_hourly, chunk_daily, chunk_dist
+            del chunk, chunk_hourly, chunk_session, chunk_dist
             gc.collect()
 
         logger.info("Chunks processed. Finalizing datasets...")
@@ -176,33 +182,33 @@ def transform_data(zip_file_path, source_id):
         # Finalize hourly
         if running_hourly is not None:
             running_hourly['source_id'] = source_id
-            validate_dataset(running_hourly, "fact_hourly_stats")
-            final_datasets['fact_hourly_stats'] = running_hourly
+            validate_dataset(running_hourly, "stg_hourly_stats")
+            final_datasets['stg_hourly_stats'] = running_hourly
 
-        # Finalize daily 
-        if running_daily is not None:
-            grouped = running_daily.groupby(['Comm', 'Trade_Date']).agg({
+        # Finalize session 
+        if running_session is not None:
+            grouped = running_session.groupby(['Comm', 'Trade_Date']).agg({
                 'Total_Volume': 'sum',
                 'Total_Turnover': 'sum',
                 'Low': 'min',
                 'High': 'max'})
             # Sort by Time_Min to put earliest chunk first
-            running_daily.sort_values('Time_Min', inplace=True)
-            global_open = running_daily.groupby(['Comm', 'Trade_Date'])['Open_Price'].first()
+            running_session.sort_values('Time_Min', inplace=True)
+            global_open = running_session.groupby(['Comm', 'Trade_Date'])['Open_Price'].first()
             # Sort by Time_Max to put latest chunk first
-            running_daily.sort_values('Time_Max', inplace=True)
-            global_close = running_daily.groupby(['Comm', 'Trade_Date'])['Close_Price'].last()
+            running_session.sort_values('Time_Max', inplace=True)
+            global_close = running_session.groupby(['Comm', 'Trade_Date'])['Close_Price'].last()
             
-            final_daily = grouped.join(global_open.rename('Open')).join(global_close.rename('Close')).reset_index()
-            final_daily['source_id'] = source_id
-            validate_dataset(final_daily, "fact_daily_summary")
-            final_datasets['fact_daily_summary'] = final_daily
+            final_session = grouped.join(global_open.rename('Open')).join(global_close.rename('Close')).reset_index()
+            final_session['source_id'] = source_id
+            validate_dataset(final_session, "stg_session_summary")
+            final_datasets['stg_session_summary'] = final_session
 
         # Finalize distribution
         if running_dist is not None:
             running_dist['source_id'] = source_id
-            validate_dataset(running_dist, "fact_trade_distribution")
-            final_datasets['fact_trade_distribution'] = running_dist
+            validate_dataset(running_dist, "stg_trade_distribution")
+            final_datasets['stg_trade_distribution'] = running_dist
 
         return final_datasets
 
@@ -237,7 +243,7 @@ def load_to_mysql(final_datasets, source_id, engine):
         raise e
     
 # SEED NEXT JOB
-def seed_daily_job(**kwargs):
+def seed_session_job(**kwargs):
     if not os.path.exists(CONFIG_PATH):
         raise FileNotFoundError("Config.ini not found")
     config = configparser.ConfigParser()
@@ -254,9 +260,36 @@ def seed_daily_job(**kwargs):
     except Exception as e:
         logger.error(f"Seeding Failed: {e}")
         raise e
+    
+# SLA COMPLIANCE CHECK
+def send_alert(level, message):
+    print(f"{level}: {message}")
+    
+def check_sla_compliance(start_time, end_time, job_status):
+    duration = end_time - start_time
+    duration = duration.total_seconds() 
+    print(f"Status: {job_status}")
+    if job_status != 'SUCCESS':
+        send_alert("CRITICAL", "Pipeline FAILED! Data is mostly missing or corrupt.")
+        return
+
+    # CHECK SLA 1: Performance
+    if duration > SLA_CONFIG["MAX_duration"]:
+        send_alert("WARNING", f"SLA BREACH: Job took {duration} seconds (Limit: {SLA_CONFIG['MAX_duration']} seconds).")
+    else:
+        print("Performance SLA: Passed")
+
+    # CHECK SLA 2: Timeliness
+    finish_hour = end_time.hour
+    if finish_hour >= SLA_CONFIG["DEADLINE_HOUR"]:
+        send_alert("WARNING", f"SLA BREACH: Data arrived late at {end_time.strftime('%H:%M')} (Deadline: {SLA_CONFIG['DEADLINE_HOUR']}:00).")
+    else:
+        print("Timeliness SLA: Passed")
 
 # MAIN EXECUTION
 def run_etl_process(**kwargs):
+    start_time = datetime.now()
+    status = "SUCCESS" # First assume
     if not os.path.exists(CONFIG_PATH):
         raise FileNotFoundError("Config.ini not found")
     
@@ -284,7 +317,7 @@ def run_etl_process(**kwargs):
                 return
             current_id = result[0]
             sql_update = load_query("update_status")
-            conn.execute(text(sql_update), {"status": "PROCESSING", "file_id": current_id})
+            conn.execute(text(sql_update), {"status": "PROCESSING", "file_id": current_id, "duration": 0})
             logger.info(f"Processing PENDING file id: {current_id}")
     except Exception as e:
         logger.error(f"Metadata error: {e}")
@@ -301,10 +334,11 @@ def run_etl_process(**kwargs):
         datasets = transform_data(temp_file, current_id)
         total_rows = sum(len(df) for df in datasets.values())
         load_to_mysql(datasets, current_id, engine)
-        
+        end_time = datetime.now()
+
         with engine.begin() as conn:
             sql_update = load_query("update_status")
-            conn.execute(text(sql_update), {"status": "SUCCESS", "file_id": current_id})
+            conn.execute(text(sql_update), {"status": "SUCCESS", "file_id": current_id, "duration": int((end_time - start_time).total_seconds())})
         log_etl_status(
             engine=engine,
             dag_id=dag_id,
@@ -320,7 +354,7 @@ def run_etl_process(**kwargs):
         try:
             with engine.begin() as conn:
                 sql_update = load_query("update_status")
-                conn.execute(text(sql_update), {"status": "FAILED", "file_id": current_id})
+                conn.execute(text(sql_update), {"status": "FAILED", "file_id": current_id, "duration": int((datetime.now() - start_time).total_seconds())})
         except:
             pass
         log_etl_status(
@@ -336,6 +370,7 @@ def run_etl_process(**kwargs):
     finally:
         if os.path.exists(temp_file):
             os.remove(temp_file)
+        check_sla_compliance(start_time, end_time, status)
         # Clean memory
         gc.collect()
 

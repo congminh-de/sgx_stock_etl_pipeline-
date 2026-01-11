@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS meta_file_status (
     status VARCHAR(20) DEFAULT 'PENDING',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    etl_sec INT DEFAULT 0 COMMENT 'Total time in seconds (Python + MySQL)',
     retry_count INT DEFAULT 0
 );
 
@@ -23,7 +24,7 @@ CREATE TABLE IF NOT EXISTS meta_file_status (
 -- Sample backfill:
 -- UPDATE meta_file_status SET status = 'PENDING' WHERE file_id = 6076;
 
-CREATE TABLE IF NOT EXISTS fact_hourly_stats (
+CREATE TABLE IF NOT EXISTS stg_hourly_stats (
     Comm VARCHAR(20),
     Trade_Date INT,
     Hour INT,
@@ -34,7 +35,7 @@ CREATE TABLE IF NOT EXISTS fact_hourly_stats (
     source_id INT
 );
 
-CREATE TABLE IF NOT EXISTS fact_daily_summary (
+CREATE TABLE IF NOT EXISTS stg_session_summary (
     Comm VARCHAR(20),
     Trade_Date INT,
     Total_Volume BIGINT,
@@ -46,7 +47,7 @@ CREATE TABLE IF NOT EXISTS fact_daily_summary (
     source_id INT
 );
 
-CREATE TABLE IF NOT EXISTS fact_trade_distribution (
+CREATE TABLE IF NOT EXISTS stg_trade_distribution (
     Comm VARCHAR(20),
     Trader_Type VARCHAR(50),
     Trade_Count INT,

@@ -1,4 +1,4 @@
-# 📈 SGX Stock Data Pipeline (End-to-End)
+# 📈 SGX Derivatives ETL-Analytics Pipeline (End-to-End)
 ![CI Status](https://github.com/congminh-de/sgx_stock_etl_pipeline-/actions/workflows/ci_check.yaml/badge.svg)
 
 ---
@@ -13,6 +13,8 @@ airflow/
 ├── dags/                     # Airflow DAGs orchestration
 ├── data/                     # Local data storage (Raw/Processed)
 ├── docs/                     # Project documentation
+│   ├── images/               # Architecture Diagrams & Screenshots
+│   └── pipeline_dictionary/  # Detailed Technical Docs (Schema, SLA, Architecture)
 ├── logs/                     # Airflow & Service logs
 ├── plugins/                  # Airflow custom plugins
 ├── scripts/                  # Python ETL scripts & helpers
@@ -83,7 +85,7 @@ This is the data flow, which is fullied containerized by Docker:
   />
 </p>
 
-👉 **Full Schema Documentation:** [View Data Dictionary](docs/DATA_DICTIONARY.md)
+👉 **Full Schema Documentation:** [View Pipeline Dictionary](docs/PIPELINE_DICTIONARY)
 
 ### Data Flow:
 1.  **Ingestion:** Airflow triggers Python scripts to download raw daily ZIP files (Tick Data) from SGX.
@@ -111,7 +113,7 @@ The pipeline produces the following analytical outputs:
 
 * **Hourly Market Stats:** Tracks Total Volume, Turnover (Total Money Flow), and OHLC (Open-High-Low-Close) prices per hour.
 * **Trade Distribution (Whale vs. Retail):** Classifies trades based on volume to identify "Shark" (Institutional) vs. "Retail" activity.
-* **Daily Summary:** End-of-day aggregation for long-term trend analysis.
+* **Session Summary:** End-of-day aggregation for long-term trend analysis.
 
 ---
 

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import sys
 
 sys.path.append("/opt/airflow/scripts")
-from sgx_stock import run_etl_process, seed_daily_job
+from sgx_stock import run_etl_process, seed_session_job
 
 default_args = {
     'owner': 'minhde',
@@ -25,7 +25,7 @@ with DAG(
 ) as dag:
     seed_task = PythonOperator(
         task_id = 'seed_daily_job',
-        python_callable = seed_daily_job,
+        python_callable = seed_session_job,
     )
 process_task = PythonOperator(
         task_id='process_pending_files',
